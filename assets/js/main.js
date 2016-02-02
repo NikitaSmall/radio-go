@@ -1,11 +1,45 @@
 $(document).ready(function() {
+  var player;
+  var currentSong;
+
   $("#jquery_jplayer_1").jPlayer({
 		ready: function () {
-			$(this).jPlayer("setMedia", {
-				title: "Bubble",
-				mp3: "/music/Lana Del Rey - Chelsea Hotel No. 2.mp3"
-			});
+      player = this;
+
+      $.ajax({
+        method: 'GET',
+        url: '/start'
+      }).done(function(song) {
+        currentSong = song;
+
+        $(player).jPlayer("setMedia", {
+  				title: song.title,
+  				mp3: song.filePath
+  			});
+      });
 		},
+
+    ended: function() {
+      $.ajax({
+        method: 'GET',
+        url: '/next/' + currentSong.id,
+      }).done(function(song) {
+        console.log(song);
+
+        if (song.id) {
+          currentSong = song;
+
+          $(player).jPlayer("setMedia", {
+    				title: song.title,
+    				mp3: song.filePath
+    			});
+
+          $(player).jPlayer("play");
+        } else {
+          console.log('Playlist ended!');
+        }
+      });
+    },
 		swfPath: "/assets/js/",
 		supplied: "mp3",
 		wmode: "window",

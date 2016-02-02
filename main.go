@@ -1,10 +1,6 @@
 package main
 
-import (
-	"net/http"
-
-	"github.com/gin-gonic/gin"
-)
+import "github.com/gin-gonic/gin"
 
 func main() {
 	router := gin.Default()
@@ -15,9 +11,8 @@ func main() {
 	router.LoadHTMLGlob("templates/*")
 
 	router.GET("/", indexHandler)
-	router.Run(":3000")
-}
+	router.GET("/start", startTrackHandler)
+	router.GET("/next/:id", nextTrackHandler)
 
-func indexHandler(c *gin.Context) {
-	c.HTML(http.StatusOK, "index.tmpl", nil)
+	router.Run(":3000")
 }

@@ -15,7 +15,9 @@ func main() {
 	go socket.MusicHub.Run()
 
 	router.GET("/", indexHandler)
+
 	router.GET("/stream", hubHandler)
+	router.GET("/current", currentTrackHandler)
 
 	router.Run(":3000")
 }

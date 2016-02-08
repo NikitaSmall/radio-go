@@ -17,20 +17,26 @@ $(document).ready(function() {
     bufArray[bufArray.length] = e.data;
   }
 
-  setInterval(function() {
-    tempBuf = new ArrayBuffer();
-
-    bufArray.forEach(function(item, i, arr) {
-      tempBuf = arrayBufferConcat(tempBuf, item);
-    });
-    bufArray = [];
-  }, 3000);
-
-  setTimeout(function() {
+  $.ajax({
+    url: '/current'
+  }).done(function(data) {
+    var delay = data / 3000.0;
+    console.log(delay);
     setInterval(function() {
-      context.decodeAudioData(tempBuf, playAudio, decodeError)
-    }, 3000
-  )}, 3000);
+      tempBuf = new ArrayBuffer();
+
+      bufArray.forEach(function(item, i, arr) {
+        tempBuf = arrayBufferConcat(tempBuf, item);
+      });
+      bufArray = [];
+    }, delay);
+
+    setTimeout(function() {
+      setInterval(function() {
+        context.decodeAudioData(tempBuf, playAudio, decodeError)
+      }, delay
+    )}, delay);
+  });
 
 
   var playAudio = function(buffer) {
@@ -40,9 +46,9 @@ $(document).ready(function() {
     source.start();
 
     if (nextStartTime == 0) {
-      // nextStartTime = context.currentTime;
+      nextStartTime = context.currentTime;
     } else {
-      // nextStartTime = nextStartTime + buffer.duration;
+      nextStartTime = nextStartTime + buffer.duration;
     }
   }
 

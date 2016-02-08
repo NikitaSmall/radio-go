@@ -1,6 +1,8 @@
 package socket
 
 import (
+	"errors"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -14,6 +16,10 @@ type Hub struct {
 	broadcast  chan []byte
 	register   chan *Client
 	unregister chan *Client
+	track      string
+	trackIndex int
+
+	tracks []string
 }
 
 // creates a hub
@@ -23,7 +29,26 @@ func newHub() Hub {
 		broadcast:  make(chan []byte),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+
+		trackIndex: 0,
+		tracks:     readTracksAt("music"),
 	}
+}
+
+func readTracksAt(dir string) []string {
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		panic(err)
+	}
+
+	songs := make([]string, 0)
+	for _, f := range files {
+		if f.Name() != ".gitkeep" {
+			songs = append(songs, dir+"/"+f.Name())
+		}
+	}
+
+	return songs
 }
 
 // main hub of this app. To send something to a client use this hub
@@ -64,7 +89,7 @@ func (hub *Hub) SendMessage(message []byte) {
 
 // main hub process
 func (hub *Hub) Run() {
-	go hub.streamStep()
+	go hub.stream()
 
 	for {
 		select {
@@ -90,8 +115,32 @@ func (hub *Hub) broadcastMessage(m []byte) {
 	}
 }
 
+func (hub *Hub) stream() {
+	for {
+		if err := hub.selectTrack(); err == nil {
+			hub.streamStep()
+		}
+
+		return
+	}
+}
+
+func (hub *Hub) selectTrack() error {
+	if hub.trackIndex >= len(hub.tracks) {
+		log.Print("no more songs")
+		return errors.New("no more songs")
+	}
+
+	hub.track = hub.tracks[hub.trackIndex]
+	hub.trackIndex++
+
+	return nil
+}
+
 func (hub *Hub) streamStep() {
-	r, err := os.Open("music/ФинродЗонг - Привал.mp3")
+	r, err := os.Open(hub.track)
+	defer r.Close()
+
 	if err != nil {
 		log.Println(err)
 		return
@@ -103,11 +152,7 @@ func (hub *Hub) streamStep() {
 	for {
 		if err := d.Decode(&f); err != nil {
 			log.Println(err)
-			if err.Error() == "EOF" {
-				return
-			} else {
-				continue
-			}
+			return
 		}
 		b := make([]byte, f.Size())
 
@@ -116,4 +161,19 @@ func (hub *Hub) streamStep() {
 
 		time.Sleep(f.Duration())
 	}
+}
+
+func (hub *Hub) TrackInfo() (mp3.Frame, error) {
+	var f mp3.Frame
+
+	r, err := os.Open(hub.track)
+	if err != nil {
+		log.Println(err)
+		return f, err
+	}
+
+	d := mp3.NewDecoder(r)
+	d.Decode(&f)
+
+	return f, nil
 }
